@@ -11,10 +11,6 @@ import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
 
 import com.layer.atlas.util.Util;
-import com.layer.messenger.App;
-import com.layer.messenger.BuildConfig;
-import com.layer.messenger.MessagesListActivity;
-import com.layer.messenger.R;
 import com.layer.messenger.util.Log;
 import com.layer.sdk.LayerClient;
 import com.layer.sdk.messaging.Conversation;

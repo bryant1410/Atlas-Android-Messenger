@@ -6,8 +6,8 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.layer.messenger.util.Log;
 import com.layer.messenger.R;
+import com.layer.messenger.util.Log;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 

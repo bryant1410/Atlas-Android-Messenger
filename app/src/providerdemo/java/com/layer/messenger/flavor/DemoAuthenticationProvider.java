@@ -52,7 +52,64 @@ public class DemoAuthenticationProvider implements AuthenticationProvider<DemoAu
         return this;
     }
 
-    private void privateAuthenticate(final String nonce) {
+    @Override
+    public void onAuthenticated(LayerClient layerClient, String userId) {
+        if (Log.isLoggable(Log.VERBOSE)) Log.v("Authenticated with Layer, user ID: " + userId);
+        layerClient.connect();
+        if (mCallback != null) {
+            mCallback.onSuccess(this, userId);
+        }
+    }
+
+    @Override
+    public void onDeauthenticated(LayerClient layerClient) {
+        if (Log.isLoggable(Log.VERBOSE)) Log.v("Deauthenticated with Layer");
+    }
+
+    @Override
+    public void onAuthenticationChallenge(final LayerClient layerClient, String nonce) {
+        if (Log.isLoggable(Log.VERBOSE)) Log.v("Received challenge: " + nonce);
+        respondToChallenge(nonce);
+    }
+
+    @Override
+    public void onAuthenticationError(LayerClient layerClient, LayerException e) {
+        String error = "Failed to authenticate with Layer: " + e.getMessage();
+        if (Log.isLoggable(Log.ERROR)) Log.e(error, e);
+        if (mCallback != null) {
+            mCallback.onError(this, error);
+        }
+    }
+
+    @Override
+    public boolean routeLogin(LayerClient layerClient, String layerAppId, Activity from) {
+        if (layerAppId == null) {
+            // No App ID: must scan from QR code.
+            if (Log.isLoggable(Log.VERBOSE)) Log.v("Routing to QR Code scanning Activity");
+            Intent intent = new Intent(from, DemoAtlasIdScannerActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            from.startActivity(intent);
+            return true;
+        }
+        if (layerClient != null && !layerClient.isAuthenticated()) {
+            if (hasCredentials()) {
+                // Use the cached AuthenticationProvider credentials to authenticate with Layer.
+                if (Log.isLoggable(Log.VERBOSE)) Log.v("Using cached credentials to authenticate");
+                layerClient.authenticate();
+            } else {
+                // App ID, but no user: must authenticate.
+                if (Log.isLoggable(Log.VERBOSE)) Log.v("Routing to login Activity");
+                Intent intent = new Intent(from, DemoLoginActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                from.startActivity(intent);
+                return true;
+            }
+        }
+        if (Log.isLoggable(Log.VERBOSE)) Log.v("No authentication routing needed");
+        return false;
+    }
+
+    private void respondToChallenge(final String nonce) {
         Credentials credentials = new Credentials(mPreferences.getString("appId", null), mPreferences.getString("name", null));
         if (credentials.getUserName() == null || credentials.getLayerAppId() == null) {
             if (Log.isLoggable(Log.WARN)) {
@@ -99,63 +156,6 @@ public class DemoAuthenticationProvider implements AuthenticationProvider<DemoAu
             if (Log.isLoggable(Log.ERROR)) Log.e(error, e);
             if (mCallback != null) mCallback.onError(this, error);
         }
-    }
-
-    @Override
-    public void onAuthenticated(LayerClient layerClient, String userId) {
-        if (Log.isLoggable(Log.VERBOSE)) Log.v("Authenticated with Layer, user ID: " + userId);
-        layerClient.connect();
-        if (mCallback != null) {
-            mCallback.onSuccess(this, userId);
-        }
-    }
-
-    @Override
-    public void onDeauthenticated(LayerClient layerClient) {
-        if (Log.isLoggable(Log.VERBOSE)) Log.v("Deauthenticated with Layer");
-    }
-
-    @Override
-    public void onAuthenticationChallenge(final LayerClient layerClient, String nonce) {
-        if (Log.isLoggable(Log.VERBOSE)) Log.v("Received challenge: " + nonce);
-        privateAuthenticate(nonce);
-    }
-
-    @Override
-    public void onAuthenticationError(LayerClient layerClient, LayerException e) {
-        String error = "Failed to authenticate with Layer: " + e.getMessage();
-        if (Log.isLoggable(Log.ERROR)) Log.e(error, e);
-        if (mCallback != null) {
-            mCallback.onError(this, error);
-        }
-    }
-
-    @Override
-    public boolean routeLogin(LayerClient layerClient, String layerAppId, Activity from) {
-        if (layerAppId == null) {
-            // No App ID: must scan from QR code.
-            if (Log.isLoggable(Log.VERBOSE)) Log.v("Routing to QR Code scanning Activity");
-            Intent intent = new Intent(from, DemoAtlasIdScannerActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-            from.startActivity(intent);
-            return true;
-        }
-        if (layerClient != null && !layerClient.isAuthenticated()) {
-            if (hasCredentials()) {
-                // Use the cached AuthenticationProvider credentials to authenticate with Layer.
-                if (Log.isLoggable(Log.VERBOSE)) Log.v("Using cached credentials to authenticate");
-                layerClient.authenticate();
-            } else {
-                // App ID, but no user: must authenticate.
-                if (Log.isLoggable(Log.VERBOSE)) Log.v("Routing to login Activity");
-                Intent intent = new Intent(from, DemoLoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                from.startActivity(intent);
-                return true;
-            }
-        }
-        if (Log.isLoggable(Log.VERBOSE)) Log.v("No authentication routing needed");
-        return false;
     }
 
     public static class Credentials {
